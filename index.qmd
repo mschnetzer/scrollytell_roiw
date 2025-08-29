@@ -1,0 +1,400 @@
+---
+title: "Fairness Perceptions of Wealth Inequality in Europe"
+author: 
+  - name: Julia Hofmann
+    orcid: 0009-0004-7396-844X
+  - name: Markus Marterbauer
+  - name: Matthias Schnetzer
+    orcid: 0000-0002-1463-1271
+doi: 10.1111/roiw.70026
+title-block-style: default
+lang: en
+bibliography: data/ip.bib
+csl: data/ip.csl
+filters:
+    - openlinksinnewpage
+format: 
+  closeread-html:
+    css: ip.css
+    code-tools: false
+    fig-format: svg
+    toc: false
+    page-layout: article
+    linkcolor: tomato
+---
+
+```{r packages}
+#| echo: false
+#| warning: false
+#| message: false
+library(tidyverse)
+library(gt)
+library(gtExtras)
+load("data/figures.RData")
+load("data/regressions.RData")
+```
+
+# {.page-columns .page-full}
+
+
+## What is this paper all about?
+
+Wealth is distributed far more unequally than income across Europe, yet little is known about how people judge these disparities. This study combines survey data from 29 countries with measures of actual inequality to explore whether citizens consider wealth differences fair or unfair. The results show that people are generally more critical of wealth inequality than of income inequality, and disapproval is stronger in countries where wealth is more concentrated at the top. Individual values and justice principles — such as support for equality and social needs — also strongly shape attitudes, while acceptance of privilege or high trust in democracy tends to reduce criticism. These findings underline that wealth inequality is not only an economic reality but also a political and social concern, with implications for trust in institutions. The study argues that policies should move beyond income redistribution to address wealth directly, through taxation, transparency, and broader access to assets.
+
+## Why do wealth and income inequality differ? 
+
+Across Europe, researchers have long tracked differences in people’s incomes. But wealth turns out to be distributed even more unequally. In every European country, wealth inequality is far greater than income inequality. While income gives a snapshot of what people earn each year, wealth accumulates over time and reflects advantages such as higher savings rates, higher returns on investments, and the receipt of inheritances or gifts. Because these benefits disproportionately go to those already better off, gaps in wealth become much wider than gaps in income. [Wealth inequality exceeds income inequality in all EU countries.]{.aside}
+
+
+::: {.cr-section layout="overlay-center"}
+::: {#cr-gini}
+```{r gini}
+#| warning: false
+#| fig-width: 12
+#| fig-height: 6
+
+giniplot <- 
+  ginidat |> ggplot(aes(x = reorder(cntry, rank, na.rm=T))) +
+  geom_segment(aes(y = 0, yend = 90, xend = cntry), linewidth = 0.04, 
+               color="grey70") +
+  scale_color_manual(values = c("navyblue", "firebrick"), 
+                     labels = c("Income" = "Disposable income", 
+                                "Wealth" = "Net wealth"), 
+                     guide = guide_legend(reverse = T)) +
+  scale_shape_manual(values = c(19,17), labels = c("Income" = "Disposable income", 
+                                                   "Wealth" = "Net wealth"),
+                     guide = guide_legend(reverse = T, override.aes = list(size=3))) +
+  theme_minimal(base_family = "Barlow Condensed", base_size = 20) +
+  labs(x = NULL, y = "Gini index: more inequality →") +
+  theme(legend.position = "none",
+        plot.title = element_text(family = "Barlow Condensed", size = 24),
+        panel.grid.minor = element_blank(),
+        panel.grid.major.y = element_line(linewidth = 0.25),
+        panel.grid.major.x = element_blank(),
+        axis.title.y = element_text(margin = margin(r = 10)))
+```
+:::
+
+::: {#cr-giniinc}
+```{r giniinc}
+#| warning: false
+#| fig-width: 12
+#| fig-height: 6
+giniplot +   
+ # geom_segment(aes(y = 0, yend = values, xend = cntry), linewidth = 7,
+  geom_point(aes(y = values), size = 5,
+  color = "navyblue",
+  data = ginidat |> filter(type == "Income")) +
+  geom_hline(aes(yintercept = mean(values[type=="Income"])),
+             linewidth = 0.2, linetype = "longdash", color = "navyblue") +
+  annotate("text", x=23, y = 50, label = "Average Income Gini", size = 6, family = "Barlow Condensed", color = "navyblue") +
+  geom_curve(aes(x = 25, y = 47, xend = 26, yend = 29.5), 
+  curvature = -0.2, color = "navyblue",
+  arrow = arrow(type = "closed", length = unit(0.02, "npc"))) +
+  labs(title = "Income inequality") 
+```
+:::
+
+::: {#cr-giniwealth}
+```{r giniwealth}
+#| warning: false
+#| fig-width: 12
+#| fig-height: 6
+giniplot + 
+#  geom_segment(aes(y = 0, yend = values, xend = cntry), linewidth = 7,
+  geom_point(aes(y = values), size = 5,
+  color = "firebrick",
+  data = ginidat |> filter(type == "Wealth")) +
+  geom_hline(aes(yintercept = mean(values[type=="Wealth"], na.rm = TRUE)),
+             linewidth = 0.2, linetype = "longdash", color = "firebrick") +
+  annotate("text", x = 8, y = 60, label = "Average Wealth Gini", size = 6, family = "Barlow Condensed", color = "firebrick") +
+  geom_curve(aes(x = 5.6, y = 60, xend = 4, yend = 74), 
+  curvature = -0.2, color = "firebrick",
+  arrow = arrow(type = "closed", length = unit(0.02, "npc"))) +
+  labs(title = "Wealth inequality") 
+```
+:::
+
+::: {#cr-giniplot}
+```{r giniplot}
+#| warning: false
+#| fig-width: 12
+#| fig-height: 6
+giniplot +   
+  geom_line(aes(y = values, group = cntry), linewidth = 6, color = "gray90") +
+  geom_point(aes(y = values, color = type), size = 5) +
+  annotate("text", x = 20, y = 80, label = "Inequality of net wealth", size = 6, family = "Barlow Condensed", color = "firebrick") +
+  annotate("text", x = 7, y = 20, label = "Inequality of disposable income", size = 6, family = "Barlow Condensed", color = "navyblue") +
+  labs(title = "Wealth and income inequality")
+```
+:::
+
+@cr-giniinc
+
+@cr-giniwealth
+
+@cr-giniplot
+
+:::
+
+Institutions matter. Welfare states across Europe have developed strong systems to redistribute income — through taxation, pensions, social transfers, or public services. These measures help reduce income inequality but do little to address wealth concentration. In fact, by lowering the need for precautionary savings (for example, through public pensions or social housing), welfare systems can unintentionally contribute to lower overall private wealth for the majority, while the very wealthy continue to accumulate assets largely untaxed. As a result, countries with generous welfare states often display not only lower average household wealth but also sharper divides in who owns it.
+
+Despite these clear differences, people often struggle to distinguish between income and wealth. Surveys show that many assume the two follow similar patterns, or they use their income position to estimate where they might stand in terms of wealth. In reality, the contrast is stark: a broad middle may have modestly similar incomes, but their wealth positions can diverge dramatically depending on property ownership, inheritances, or savings. Studies consistently find that while the public underestimates how unequal wealth is, they nonetheless express strong disapproval of large wealth gaps and prefer more equal distributions than currently exist.
+
+## What drives perceptions of wealth inequality?
+
+At the macro level, perceptions of wealth inequality are shaped by a country’s economy and welfare system. In some societies, higher inequality triggers criticism, while in others it is seen as the result of effort and therefore acceptable. Welfare states play a key role: they not only redistribute but also influence cultural norms about what levels of inequality are tolerable. These institutional settings provide the backdrop against which people judge whether wealth differences feel fair or unfair. [Wealth inequality perceptions depend on national institutions and individual experiences, values, and beliefs about fairness.]{.aside}
+
+At the individual level, personal circumstances and values matter most. Women and those with experience of hardship tend to view inequality more critically, while people’s social class shapes how legitimate they see wealth gaps. Attitudes about fairness are especially influential: those who value equality and social needs oppose wealth concentration, while those who accept privilege by birth are more tolerant of it. Political trust also plays a role—those more satisfied with democracy are less likely to see wealth differences as unfair.
+
+## How unfair do people perceive wealth inequality?
+
+Our study draws on the European Social Survey (ESS) 2018, which asked people in 29 European countries whether wealth differences in their country are unfairly small, fair, or unfairly large. Responses were given on a nine-point scale, from −4 (“extremely unfairly small”) to +4 (“extremely unfairly large”), with 0 marking fairness. This variable is the backbone of the analysis, as it directly captures how citizens perceive the fairness of wealth inequality, rather than just estimating its extent. The ESS data are combined with inequality indicators from the World Inequality Database (WID) and socio-economic statistics from Eurostat, giving the study both micro-level and macro-level perspectives.
+
+
+:::{.cr-section layout="sidebar-left"}
+
+:::{#cr-percplot}
+```{r percplot}
+#| output: 'asis'
+#| fig-asp: 1.3
+#| warning: false
+percplot <-
+plotdat |> 
+  ggplot(aes(x = anteil, y = cntry, group = var)) +
+  geom_segment(aes(yend = cntry, xend = 0), linewidth = 7, color = "gray97") +
+  geom_text(aes(x = 2, label = cntry), family = "Roboto Condensed", color = "black",
+  size = 5, vjust = .5) +
+  geom_point(aes(color = var), size = 7, shape = 15) + 
+  geom_text(aes(label = round(anteil, 0)), color = "white", size = 4.5, hjust = .5,
+            vjust = .5, family = "Roboto Condensed") +
+  annotate("text", x = 61, y = 23, family = "Barlow Condensed", size = 5.5, hjust = 0,
+  label = str_wrap("Share of people who assess wealth differences as unfairly high", 20), 
+  color = "firebrick", lineheight = 0.9) +
+    annotate("text", x = 30, y = 16, family = "Barlow Condensed", size = 5.5, hjust = 1,
+  label = str_wrap("Share of people who assess the income of top 10% as unfairly high", 17), 
+  color = "navyblue", lineheight = 0.9) +
+  scale_color_manual(name = NULL,
+                     values = c("navyblue", "firebrick"), 
+                     labels = c("Income of top 10%", "Wealth differences"),
+                     guide = guide_legend(reverse = T)) +
+  scale_x_continuous(labels = scales::percent_format(scale=1)) + 
+  labs(y = NULL, x = "Share of response: unfairly high") +
+  theme_minimal(base_family = "Barlow Condensed", base_size = 20) +
+  theme(panel.grid.minor = element_blank(),
+        panel.grid.major.x = element_line(linewidth = 0.25),
+        panel.grid.major.y = element_blank(),
+        axis.title.x = element_text(margin = margin(t = 10)),
+        axis.text.y = element_blank(),
+        legend.position = "none",
+        legend.position.inside = c(0.85, 0.85),
+        legend.text = element_text(size = 14),
+        legend.key.spacing = unit(0, "pt"),
+        legend.key.spacing.x = unit(0.5, "lines"))
+percplot
+```
+:::
+
+:::{#cr-percplothu}
+```{r percplothu}
+#| output: 'asis'
+#| fig-asp: 1.3
+#| warning: false
+percplot + 
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=3.5, ymax=Inf, 
+  fill = "white", color=NA, alpha = 0.8) + 
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=2.5, ymax=-Inf, 
+  fill = "white", color=NA, alpha = 0.8)
+```
+:::
+
+:::{#cr-percplotdk}
+```{r percplotdk}
+#| output: 'asis'
+#| fig-asp: 1.3
+#| warning: false
+percplot + 
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=27.5, ymax=Inf, 
+  fill = "white", color=NA, alpha = 0.8) + 
+  annotate("rect", xmin=-Inf, xmax=Inf, ymin=26.5, ymax=-Inf, 
+  fill = "white", color=NA, alpha = 0.8)
+```
+:::
+
+Across Europe, wealth disparities are perceived as more unfair than top incomes in all countries except Czechia. This suggests that people in general are more troubled by how unequally wealth is distributed. @cr-percplot
+
+In Hungary, for instance, more than three quarters of people see wealth gaps as unfairly large. This level of criticism is much stronger than their views on high incomes, underlining that wealth inequality strikes a deeper chord. @cr-percplothu
+
+By contrast, Denmark shows one of the lowest levels of disapproval, with about four in ten people judging wealth disparities as unfairly high. Given that wealth inequality is below the European average, Danes appear less alarmed about wealth differences. @cr-percplotdk
+
+@cr-percplot
+
+:::
+
+In countries where the richest 5% hold a larger share of wealth, more people tend to see wealth differences as unfair. This stands in contrast to earlier findings on income, where higher inequality did not always produce stronger criticism. Still, the pattern is not uniform — some countries with moderate inequality show high disapproval, while others with extreme concentration display mixed reactions, highlighting that cultural and institutional contexts also shape how unfair wealth gaps are perceived. [Perceptions of wealth inequality rise with concentration, but cultural and institutional contexts shape reactions.]{.aside}
+
+:::{.cr-section layout="overlay-center"}
+
+:::{#cr-scatplot}
+
+```{r scatplot}
+#| warning: false
+#| fig-width: 12
+#| fig-height: 7
+
+scatdat |> 
+ggplot(aes(x = wlth_top5, y = d_wltdffr)) +
+  geom_smooth(method='lm', formula=y~x, fill=NA, color="black", linewidth=0.8, level=0.9) +
+  ggflags::geom_flag(aes(country = tolower(cntry)), size = 10, 
+  position = position_jitter(width = .35, height = .35, seed = 1239)) + 
+  scale_y_continuous(labels = scales::percent_format(scale=1, accuracy=1)) +
+  scale_x_continuous(labels = scales::percent_format(scale=1, accuracy=1),
+                     expand = c(0.02, 0.05)) +
+  labs(x="Net wealth share of the top 5%", 
+       y="Perception: Wealth differences are unfairly large") +
+  theme_minimal(base_family = "Roboto Condensed", base_size = 20) +
+  theme(legend.key.spacing = unit(0, "pt"),
+        panel.grid.minor = element_blank(),
+        panel.grid.major = element_line(linewidth = 0.25),
+        axis.title.x = element_text(margin = margin(t = 10), size = 18),
+        axis.title.y = element_text(margin = margin(r = 10), size = 18))
+```
+
+:::
+
+@cr-scatplot
+
+The relationship between the wealth share of the top 5% and perceptions of unfairness is moderately positive and statistically significant. This finding is robust when taking the wealth share of the top 10%. @cr-scatplot
+
+Several countries with lower top 5% shares, like Slovakia and most Scandinavian countries, display below-average rates of unfairness perceptions in the wealth distribution. [@cr-scatplot]{scale-by="2" pan-to="25%,-10%"}
+
+On the other hand, more people tend to assess wealth disparities as unfair in countries with the highest top 5% shares, such as Cyprus, Estonia, and Hungary. [@cr-scatplot]{scale-by="4" pan-to="-120%,120%"}
+
+However, the picture is not entirely clear-cut as there is a notable countertrend in the middle of the graph. [@cr-scatplot]{scale-by="2" pan-to="-10%,30%"}
+
+@cr-scatplot
+
+:::
+
+## What are the main results of the paper?
+
+To analyze fairness perceptions of wealth inequality, we use ordered logistic mixed-effects models. This technique is well-suited because the fairness variable is ordinal (ranked categories), and individuals are clustered within countries. The model allows researchers to estimate how both individual characteristics (like gender, class, or justice principles) and country-level factors (like wealth concentration or welfare spending) are linked to perceptions of unfairness. By including random effects for countries, the approach accounts for national differences while still identifying broader patterns. This provides a nuanced view of how personal experiences and structural conditions jointly shape attitudes toward wealth inequality.
+
+The results suggest that perceptions of wealth inequality are closely tied to how concentrated wealth is at the top: the greater the share held by the richest, the more people judge it as unfair. At the same time, personal values and justice principles strongly shape perceptions, with equality- and need-oriented views fueling criticism, while acceptance of privilege dampens it.
+
+:::{.cr-section layout="sidebar-left"}
+
+:::{#cr-reg}
+```{r regression}
+#| warning: false
+#| html-table-processing: none
+
+vars <- tribble(~variable, ~name, ~source, ~icon, 
+                "wlth_top5_resc", "Top 5% wealth share", "WID", "chart-pie",
+                "wlth_top10_resc", "Top 10% wealth share", "WID", "chart-pie",
+                "wlth_gini_resc", "Wealth Gini", "WID", "chart-pie",
+                "gdp_resc", "GDP per capita (PPP)", "Eurostat", "user-gear",
+                "socexp_resc", "Social expenditure", "Eurostat", "hand-holding-dollar",
+                "poverty_resc", "Poverty rate", "Eurostat", "piggy-bank",
+                "inc_gini.eu_resc", "Income Gini coefficient", "Eurostat", "scale-unbalanced-flip",
+                "female", "Gender (female)", "ESS", "venus",
+                "agea", "Age", "ESS", "cake-candles",
+                "d_midearner", "Income: Middle 4 deciles", "ESS", "battery-half",
+                "d_highearner", "Income: Top 3 deciles", "ESS", "battery-full",
+                "d_workingclass", "Social class: working class", "ESS", "toolbox",
+                "d_lowermiddle", "Social class: lower middle", "ESS", "user-nurse",
+                "d_uppermiddle", "Social class: upper middle", "ESS", "user-tie",
+                "unemp12m", "Experience with long-term unempl.", "ESS", "person-falling",
+                "r_sofrdst", "Justice principle: Equality", "ESS", "scale-balanced",
+                "r_sofrwrk", "Justice principle: Equity", "ESS", "dumbbell",
+                "r_sofrpr", "Justice principle: Need", "ESS", "hand-holding-hand",
+                "r_sofrprv", "Justice principle: Entitlement", "ESS", "crown",
+                "d_topinfr", "Top income perceived unfair", "ESS", "sack-dollar",
+                "d_trstprl", "Trust in parliament", "ESS", "building-columns",
+                "d_stfdem", "Satisfied with democracy", "ESS", "people-roof") |> 
+  mutate(name = fct_inorder(name))
+
+regtab <- reg1  |> 
+  left_join(vars, by = c("term" = "variable")) |> 
+  filter(!is.na(name)) |> 
+  mutate(effect = case_when(
+    estimate > 0 & p.value <= 0.05 ~ "angles-up",
+    estimate < 0 & p.value <= 0.05 ~ "angles-down",
+    TRUE ~ "xmark"
+  )) |> 
+  select(icon, name, effect, estimate, p.value) |> 
+  arrange(name) 
+
+pineqtab <-
+regtab |>
+  gt() |>
+  fmt_icon(columns = icon, fill_color = "firebrick") |> 
+  fmt_icon(columns = effect, fill_color = c("angles-up" = "green", "angles-down" = "red", "xmark" = "gray")) |> 
+  fmt_number(columns = c(estimate, p.value), decimals = 3) |> 
+  cols_move_to_start(columns = icon) |>
+  cols_label(icon = "", name = "Variable", effect = "", estimate = "Est.", p.value = "P-Val.")  |> 
+  cols_align(columns = c(icon, effect), align = "center") |> 
+  cols_align(columns = "name", align = "left")  |>  
+  tab_source_note(source_note = "Note: Results from ordered logistic mixed-effects model.") |> 
+  tab_options(source_notes.font.size = "60%", column_labels.font.size = "100%", table.font.names = "Roboto Slab") |> 
+  gt_theme_538()
+
+pineqtab  
+```
+:::
+
+:::{#cr-regclass}
+```{r regclass}
+#| html-table-processing: none
+pineqtab  |> 
+  gt_highlight_rows(rows = 10:11, fill = "lightblue", font_weight = "normal")
+```
+:::
+
+:::{#cr-regjp}
+```{r regjp}
+#| html-table-processing: none
+pineqtab  |> 
+  gt_highlight_rows(rows = 13:16, fill = "lightblue", font_weight = "normal")
+```
+:::
+
+:::{#cr-regpol}
+```{r regpol}
+#| html-table-processing: none
+pineqtab  |> 
+  gt_highlight_rows(rows = 18:19, fill = "lightblue", font_weight = "normal")
+```
+:::
+
+@cr-reg
+
+People in higher social classes are more likely to see wealth inequality as unfair, lending support to the "status-legitimacy hypothesis". In other words, those who are better off are often more critical of wealth concentration than those in disadvantaged positions. @cr-regclass
+
+Endorsing justice principles based on equality or social need as guiding norms strongly increases perceptions that wealth gaps are unjust. By contrast, those who see entitlement by birth as legitimate are much more tolerant of inequality. @cr-regjp
+
+Citizens who are satisfied with democracy tend to view wealth differences as less concerning. Conversely, perceiving inequality as unfair may weaken satisfaction with public institutions, suggesting a feedback loop between inequality and democratic legitimacy. @cr-regpol
+
+:::
+
+We test whether our results hold under different ways of measuring perceptions of wealth inequality and with alternative data sources. When treating the fairness scale as continuous or focusing only on respondents who judged wealth gaps as "unfairly large", the findings remain robust: higher wealth concentration is consistently linked to stronger perceptions of unfairness. Using harmonized wealth data from the Household Finance and Consumption Survey (HFCS) also confirms the main results. This strengthens confidence that the associations found are not artifacts of measurement or dataset choice.
+
+## What are the conclusions of this study?
+
+Our study shows that wealth inequality is seen as more unfair than income inequality across Europe, especially in countries with high wealth concentration. Individual values and justice principles strongly guide how people evaluate fairness, with norms of equality and need driving criticism of wealth gaps. Importantly, we suggest that wealth inequality is not only a statistical fact but also a social and political concern, shaping trust in institutions and democratic legitimacy. This calls for greater attention to the "world of wealth", both in research and policy, as it differs fundamentally from the more familiar "world of income". [Addressing unfair wealth inequality requires stronger inheritance and wealth taxes, greater transparency, and policies enabling broader asset ownership.]{.aside}
+
+The findings highlight that tackling inequality cannot stop at income redistribution — wealth must also come into focus. Options include strengthening inheritance and wealth taxation, improving transparency around wealth ownership, and designing policies that enable broader asset accumulation, such as affordable housing or savings schemes. By shifting attention from the "world of income" to the "world of wealth", governments can respond more directly to public perceptions of unfairness and foster a greater sense of social justice.
+
+\
+
+# {#info} 
+This document was created with [Quarto](https://quarto.org), [closeread](https://closeread.netlify.app) and [R](https://www.r-project.org). 
+
+\
+
+The webpage is based on an article written by Julia Hofmann, Markus Marterbauer and Matthias Schnetzer that has been published in the [Review of Income and Wealth](https://doi.org/10.1111/roiw.70026).
+
+\
+
+{{< fa envelope >}} [matthias.schnetzer@akwien.at](mailto:matthias.schnetzer (at) akwien.at) &emsp; {{< fa globe >}} [mschnetzer.github.io](https://mschnetzer.github.io/) &emsp; {{< fa brands bluesky >}} [matschnetzer](https://bsky.app/profile/matschnetzer.bsky.social)
+
